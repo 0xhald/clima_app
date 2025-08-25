@@ -4,12 +4,18 @@ defmodule ClimaWeb.WeatherLive do
   alias Clima.{Favorites, WeatherService}
 
   @impl true
-  def mount(_params, _session, socket) do
-    favorite_cities = Favorites.list_favorite_cities()
+  def mount(_params, session, socket) do
+    # Handle both authenticated and anonymous users
+    current_user = get_current_user(socket)
+    user_or_session = get_user_or_session(socket, session)
+    favorite_cities = Favorites.list_favorite_cities(user_or_session)
 
     socket =
       socket
       |> assign(:favorite_cities, favorite_cities)
+      |> assign(:current_user, current_user)
+      |> assign(:session, session)
+      |> assign(:is_authenticated, !is_nil(current_user))
       |> assign(:search_query, "")
       |> assign(:search_results, [])
       |> assign(:selected_city, nil)
@@ -34,63 +40,64 @@ defmodule ClimaWeb.WeatherLive do
 
   @impl true
   def handle_event("add_to_favorites", params, socket) do
-    city_params = %{
-      "name" => params["name"],
-      "country" => params["country"],
-      "state" => params["state"],
-      "lat" => String.to_float(params["lat"]),
-      "lon" => String.to_float(params["lon"])
-    }
+    user_or_session = get_user_or_session(socket)
+    city_params = format_city_params(params)
 
-    case Favorites.create_favorite_city(city_params) do
-      {:ok, _favorite_city} ->
-        favorite_cities = Favorites.list_favorite_cities()
-
+    case Favorites.create_favorite_city(city_params, user_or_session) do
+      {:ok, updated_favorites} ->
         socket =
           socket
-          |> assign(:favorite_cities, favorite_cities)
+          |> assign(:favorite_cities, updated_favorites)
           |> assign(:search_results, [])
           |> assign(:search_query, "")
-          |> put_flash(:info, "City added to favorites!")
+          |> maybe_update_session_favorites(updated_favorites)
+          |> put_flash(:info, get_success_message(socket.assigns.is_authenticated))
 
         {:noreply, socket}
 
-      {:error, changeset} ->
-        error_msg =
-          case changeset.errors do
-            [lat: {"has already been taken", _}] -> "City already in favorites"
-            _ -> "Could not add city to favorites"
-          end
+      {:error, :already_exists} ->
+        {:noreply, put_flash(socket, :error, "City already in favorites")}
 
-        {:noreply, put_flash(socket, :error, error_msg)}
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Could not add city to favorites")}
     end
   end
 
   @impl true
   def handle_event("remove_from_favorites", %{"id" => id}, socket) do
-    IO.puts("Removing city with ID: #{id}")
-    city = Favorites.get_favorite_city!(id)
-    {:ok, _} = Favorites.delete_favorite_city(city)
+    user_or_session = get_user_or_session(socket)
 
-    favorite_cities = Favorites.list_favorite_cities()
+    case Favorites.delete_favorite_city(id, user_or_session) do
+      {:ok, updated_favorites} ->
+        socket =
+          socket
+          |> assign(:favorite_cities, updated_favorites)
+          |> assign(:selected_city, nil)
+          |> assign(:current_weather, nil)
+          |> assign(:forecast_data, nil)
+          |> maybe_update_session_favorites(updated_favorites)
+          |> put_flash(:info, "City removed from favorites")
 
-    socket =
-      socket
-      |> assign(:favorite_cities, favorite_cities)
-      |> assign(:selected_city, nil)
-      |> assign(:current_weather, nil)
-      |> assign(:forecast_data, nil)
-      |> put_flash(:info, "City removed from favorites")
+        {:noreply, socket}
 
-    {:noreply, socket}
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, "City not found in favorites")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Could not remove city from favorites")}
+    end
   end
 
   @impl true
   def handle_event("select_city", %{"id" => id}, socket) do
-    city = Favorites.get_favorite_city!(id)
-    send(self(), {:load_weather, city})
+    case find_city_by_id(id, socket.assigns.favorite_cities) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "City not found")}
 
-    {:noreply, assign(socket, selected_city: city, loading_weather: true)}
+      city ->
+        send(self(), {:load_weather, city})
+        {:noreply, assign(socket, selected_city: city, loading_weather: true)}
+    end
   end
 
   @impl true
@@ -130,6 +137,64 @@ defmodule ClimaWeb.WeatherLive do
 
         {:noreply, socket}
     end
+  end
+
+  # Helper functions for dual-mode operation
+
+  defp get_current_user(socket) do
+    case socket.assigns do
+      %{current_scope: %{user: user}} when not is_nil(user) -> user
+      _ -> nil
+    end
+  end
+
+  defp get_user_or_session(socket, session \\ nil) do
+    case get_current_user(socket) do
+      nil -> session || socket.assigns[:session] || %{}
+      user -> user
+    end
+  end
+
+  defp format_city_params(params) do
+    %{
+      name: params["name"],
+      country: params["country"],
+      state: params["state"],
+      lat: String.to_float(params["lat"]),
+      lon: String.to_float(params["lon"]),
+      openweather_id: params["openweather_id"]
+    }
+  end
+
+  defp get_success_message(true), do: "City saved to your account!"
+  defp get_success_message(false), do: "City added to session (register to save permanently)"
+
+  defp maybe_update_session_favorites(socket, favorites) do
+    if socket.assigns.is_authenticated do
+      # DB handles persistence
+      socket
+    else
+      # Update session for anonymous users
+      session_data =
+        Enum.map(favorites, fn city ->
+          %{
+            "name" => city.name,
+            "country" => city.country,
+            "state" => city.state,
+            "lat" => city.lat,
+            "lon" => city.lon,
+            "openweather_id" => city.openweather_id
+          }
+        end)
+
+      Phoenix.LiveView.put_session(socket, "favorite_cities", session_data)
+    end
+  end
+
+  defp find_city_by_id(id, favorite_cities) do
+    Enum.find(favorite_cities, fn city ->
+      to_string(city.id) == to_string(id)
+    end)
   end
 
   defp format_datetime(datetime) do

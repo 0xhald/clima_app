@@ -24,21 +24,35 @@ defmodule Clima.Favorites do
 
   @doc """
   Creates a favorite city for authenticated users or adds to session for anonymous users.
+  Returns {:ok, updated_favorites_list} for consistency.
   """
   def create_favorite_city(attrs, user_or_session) do
     case user_or_session do
-      %User{} = user -> create_user_favorite(attrs, user)
-      session when is_map(session) -> add_to_session_favorites(session, attrs)
+      %User{} = user ->
+        case create_user_favorite(attrs, user) do
+          {:ok, _created} -> {:ok, list_user_favorites(user)}
+          {:error, reason} -> {:error, reason}
+        end
+
+      session when is_map(session) ->
+        add_to_session_favorites(session, attrs)
     end
   end
 
   @doc """
   Deletes a favorite city for authenticated users or removes from session for anonymous users.
+  Returns {:ok, updated_favorites_list} for consistency.
   """
   def delete_favorite_city(city_or_id, user_or_session) do
     case user_or_session do
-      %User{} = user -> delete_user_favorite(city_or_id, user)
-      session when is_map(session) -> remove_from_session_favorites(session, city_or_id)
+      %User{} = user ->
+        case delete_user_favorite(city_or_id, user) do
+          {:ok, _deleted} -> {:ok, list_user_favorites(user)}
+          {:error, reason} -> {:error, reason}
+        end
+
+      session when is_map(session) ->
+        remove_from_session_favorites(session, city_or_id)
     end
   end
 
