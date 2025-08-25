@@ -1,7 +1,49 @@
 <div class="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 p-4">
   <div class="max-w-6xl mx-auto">
+    <!-- Header with Auth Status -->
+    <div class="navbar bg-white/10 backdrop-blur-sm rounded-lg mb-6 shadow-lg">
+      <div class="navbar-start">
+        <h1 class="text-xl font-bold text-white">🌤️ Clima Weather</h1>
+      </div>
+
+      <div class="navbar-end">
+        <%= if @current_user do %>
+          <!-- Authenticated user -->
+          <div class="flex items-center gap-4">
+            <span class="text-sm text-white/90">
+              Welcome, <span class="font-medium">{@current_user.email}</span>
+            </span>
+            <.link
+              href={~p"/users/log_out"}
+              method="delete"
+              class="btn btn-ghost btn-sm text-white hover:bg-white/20"
+            >
+              Log out
+            </.link>
+          </div>
+        <% else %>
+          <!-- Anonymous user with gentle CTA -->
+          <div class="flex items-center gap-2">
+            <div class="tooltip tooltip-bottom" data-tip="Save favorites across devices">
+              <span class="text-xs text-white/70">
+                {length(@favorite_cities)} session favorites
+              </span>
+            </div>
+            <.link href={~p"/users/register"} class="btn btn-primary btn-sm">
+              Sign Up
+            </.link>
+            <.link
+              href={~p"/users/log_in"}
+              class="btn btn-ghost btn-sm text-white hover:bg-white/20"
+            >
+              Log In
+            </.link>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
     <div class="text-center mb-8">
-      <h1 class="text-4xl font-bold text-white mb-2">Clima Weather</h1>
       <p class="text-blue-100">Search cities worldwide and track your favorites</p>
     </div>
 
@@ -59,22 +101,38 @@
 <!-- Favorites List -->
         <div class="card bg-white shadow-xl">
           <div class="card-body">
-            <h2 class="card-title text-lg">Favorite Cities</h2>
+            <div class="flex justify-between items-center">
+              <h2 class="card-title text-lg">Favorite Cities</h2>
+              <%= unless @current_user do %>
+                <div class="badge badge-warning badge-sm">Session Only</div>
+              <% end %>
+            </div>
+
             <%= if Enum.empty?(@favorite_cities) do %>
-              <p class="text-gray-500 text-center py-4">No favorite cities yet</p>
+              <div class="text-center py-8">
+                <p class="text-gray-500 mb-4">No favorite cities yet</p>
+                <%= unless @current_user do %>
+                  <div class="bg-info/10 text-info-content rounded-lg p-4">
+                    <p class="text-sm">
+                      💡 <.link href={~p"/users/register"} class="link">Create an account</.link>
+                      to save favorites permanently
+                    </p>
+                  </div>
+                <% end %>
+              </div>
             <% else %>
+              <!-- Show favorites with persistence status -->
               <%= for city <- @favorite_cities do %>
-                <div
-                  class="flex justify-between items-center p-3 border rounded-lg mt-2 hover:bg-gray-50 cursor-pointer"
-                  phx-click="select_city"
-                  phx-value-id={city.id}
-                >
-                  <div>
+                <div class="flex justify-between items-center p-3 border rounded-lg mt-2 hover:bg-gray-50 cursor-pointer">
+                  <!-- City info -->
+                  <div phx-click="select_city" phx-value-id={city.id} class="flex-1">
                     <p class="font-medium">{city.name}</p>
                     <p class="text-sm text-gray-500">
                       {if city.state, do: "#{city.state}, "}{city.country}
                     </p>
                   </div>
+                  
+<!-- Remove button -->
                   <button
                     phx-click="remove_from_favorites"
                     phx-value-id={city.id}
@@ -82,6 +140,22 @@
                   >
                     <.icon name="hero-x-mark" class="h-4 w-4" />
                   </button>
+                </div>
+              <% end %>
+              
+<!-- Encouragement banner for anonymous users -->
+              <%= unless @current_user do %>
+                <div class="alert alert-info mt-4">
+                  <.icon name="hero-information-circle" class="h-5 w-5" />
+                  <div>
+                    <p class="text-sm">
+                      You have {length(@favorite_cities)} favorites in this session.
+                      <.link href={~p"/users/register"} class="link font-medium">
+                        Sign up
+                      </.link>
+                      to keep them forever!
+                    </p>
+                  </div>
                 </div>
               <% end %>
             <% end %>
