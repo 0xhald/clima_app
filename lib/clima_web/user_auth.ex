@@ -245,6 +245,17 @@ defmodule ClimaWeb.UserAuth do
     end
   end
 
+  def on_mount(:redirect_if_authenticated, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    if socket.assigns.current_scope && socket.assigns.current_scope.user do
+      {:halt,
+       Phoenix.LiveView.redirect(socket, to: signed_in_path(%Plug.Conn{assigns: socket.assigns}))}
+    else
+      {:cont, socket}
+    end
+  end
+
   defp mount_current_scope(socket, session) do
     Phoenix.Component.assign_new(socket, :current_scope, fn ->
       {user, _} =
@@ -276,6 +287,19 @@ defmodule ClimaWeb.UserAuth do
       |> maybe_store_return_to()
       |> redirect(to: ~p"/users/log-in")
       |> halt()
+    end
+  end
+
+  @doc """
+  Plug to redirect authenticated users away from auth pages.
+  """
+  def redirect_if_authenticated(conn, _opts) do
+    if conn.assigns.current_scope && conn.assigns.current_scope.user do
+      conn
+      |> redirect(to: signed_in_path(conn))
+      |> halt()
+    else
+      conn
     end
   end
 

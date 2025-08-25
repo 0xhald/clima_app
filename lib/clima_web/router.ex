@@ -17,10 +17,16 @@ defmodule ClimaWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # Main weather app - accessible to all users (authenticated and anonymous)
   scope "/", ClimaWeb do
     pipe_through :browser
 
-    live "/", WeatherLive
+    live_session :public_with_optional_auth,
+      on_mount: [{ClimaWeb.UserAuth, :mount_current_scope}] do
+      # Open to all users
+      live "/", WeatherLive
+    end
+
     get "/home", PageController, :home
   end
 
@@ -60,15 +66,21 @@ defmodule ClimaWeb.Router do
     post "/users/update-password", UserSessionController, :update_password
   end
 
+  # Auth pages - redirect if already logged in
   scope "/", ClimaWeb do
-    pipe_through [:browser]
+    pipe_through [:browser, :redirect_if_authenticated]
 
-    live_session :current_user,
-      on_mount: [{ClimaWeb.UserAuth, :mount_current_scope}] do
+    live_session :auth_pages,
+      on_mount: [{ClimaWeb.UserAuth, :redirect_if_authenticated}] do
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new
     end
+  end
+
+  # Auth actions
+  scope "/", ClimaWeb do
+    pipe_through [:browser]
 
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
