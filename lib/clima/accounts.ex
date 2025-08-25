@@ -80,6 +80,57 @@ defmodule Clima.Accounts do
     |> Repo.insert()
   end
 
+  @doc """
+  Registers a user and migrates their session favorites to the database.
+
+  ## Examples
+
+      iex> register_user_and_migrate_favorites(%{email: "user@example.com", password: "password"}, session_favorites)
+      {:ok, %{user: %User{}, migrated_favorites: [%FavoriteCity{}]}}
+
+      iex> register_user_and_migrate_favorites(%{email: "invalid"}, [])
+      {:error, :user, changeset, _changes}
+
+  """
+  def register_user_and_migrate_favorites(user_attrs, session_favorites \\ []) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(:user, User.email_changeset(%User{}, user_attrs))
+    |> Ecto.Multi.run(:migrate_favorites, fn _repo, %{user: user} ->
+      migrate_session_favorites_to_user(user, session_favorites)
+    end)
+    |> Repo.transaction()
+  end
+
+  defp migrate_session_favorites_to_user(_user, []), do: {:ok, []}
+
+  defp migrate_session_favorites_to_user(user, session_favorites) do
+    favorites_with_user =
+      Enum.map(session_favorites, fn favorite ->
+        favorite_attrs = %{
+          name: favorite["name"],
+          country: favorite["country"],
+          state: favorite["state"],
+          lat: favorite["lat"],
+          lon: favorite["lon"],
+          openweather_id: favorite["openweather_id"],
+          user_id: user.id
+        }
+
+        favorite_attrs
+      end)
+
+    Enum.reduce_while(favorites_with_user, {:ok, []}, fn favorite_attrs, {:ok, acc} ->
+      case Clima.Favorites.create_favorite_city(favorite_attrs) do
+        {:ok, created} ->
+          {:cont, {:ok, [created | acc]}}
+
+        {:error, _changeset} ->
+          # If duplicate, continue (user might have added same city in both modes)
+          {:cont, {:ok, acc}}
+      end
+    end)
+  end
+
   ## Settings
 
   @doc """
