@@ -1,0 +1,215 @@
+<div class="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 p-4">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-white mb-2">Clima Weather</h1>
+      <p class="text-blue-100">Search cities worldwide and track your favorites</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Search and Favorites Panel -->
+      <div class="lg:col-span-1 space-y-4">
+        <!-- Search Box -->
+        <div class="card bg-white shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title text-lg">Search Cities</h2>
+            <.form for={%{}} phx-submit="search_cities" phx-change="search_cities">
+              <div class="form-control">
+                <input
+                  type="text"
+                  name="search[query]"
+                  value={@search_query}
+                  placeholder="Enter city name..."
+                  class="input input-bordered w-full"
+                  autocomplete="off"
+                />
+              </div>
+            </.form>
+            
+<!-- Search Results -->
+            <%= if @loading_search do %>
+              <div class="flex justify-center py-4">
+                <span class="loading loading-spinner loading-md"></span>
+              </div>
+            <% else %>
+              <%= for city <- @search_results do %>
+                <div class="flex justify-between items-center p-3 border rounded-lg mt-2 hover:bg-gray-50">
+                  <div>
+                    <p class="font-medium">{city.display_name}</p>
+                    <p class="text-sm text-gray-500">
+                      {city.lat |> Float.round(2)}, {city.lon |> Float.round(2)}
+                    </p>
+                  </div>
+                  <button
+                    phx-click="add_to_favorites"
+                    phx-value-name={city.name}
+                    phx-value-country={city.country}
+                    phx-value-state={city.state}
+                    phx-value-lat={city.lat}
+                    phx-value-lon={city.lon}
+                    class="btn btn-sm btn-primary"
+                  >
+                    <.icon name="hero-heart" class="h-4 w-4" />
+                  </button>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+        
+<!-- Favorites List -->
+        <div class="card bg-white shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title text-lg">Favorite Cities</h2>
+            <%= if Enum.empty?(@favorite_cities) do %>
+              <p class="text-gray-500 text-center py-4">No favorite cities yet</p>
+            <% else %>
+              <%= for city <- @favorite_cities do %>
+                <div
+                  class="flex justify-between items-center p-3 border rounded-lg mt-2 hover:bg-gray-50 cursor-pointer"
+                  phx-click="select_city"
+                  phx-value-id={city.id}
+                >
+                  <div>
+                    <p class="font-medium">{city.name}</p>
+                    <p class="text-sm text-gray-500">
+                      {if city.state, do: "#{city.state}, "}{city.country}
+                    </p>
+                  </div>
+                  <button
+                    phx-click="remove_from_favorites"
+                    phx-value-id={city.id}
+                    class="btn btn-sm btn-ghost btn-circle"
+                  >
+                    <.icon name="hero-x-mark" class="h-4 w-4" />
+                  </button>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+      
+<!-- Weather Display Panel -->
+      <div class="lg:col-span-2 space-y-4">
+        <%= if @selected_city do %>
+          <%= if @loading_weather do %>
+            <div class="card bg-white shadow-xl">
+              <div class="card-body text-center">
+                <span class="loading loading-spinner loading-lg"></span>
+                <p class="mt-4">Loading weather for {@selected_city.name}...</p>
+              </div>
+            </div>
+          <% else %>
+            <%= if @current_weather do %>
+              <!-- Current Weather Card -->
+              <div class="card bg-white shadow-xl">
+                <div class="card-body">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h2 class="card-title text-2xl">{@selected_city.name}</h2>
+                      <p class="text-gray-500">
+                        {if @selected_city.state, do: "#{@selected_city.state}, "}{@selected_city.country}
+                      </p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-4xl font-bold">{@current_weather.temperature}°C</p>
+                      <p class="text-gray-500 capitalize">{@current_weather.description}</p>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    <div class="stat">
+                      <div class="stat-title text-sm">Feels like</div>
+                      <div class="stat-value text-lg">{@current_weather.feels_like}°C</div>
+                    </div>
+                    <div class="stat">
+                      <div class="stat-title text-sm">Min</div>
+                      <div class="stat-value text-lg">{@current_weather.temp_min}°C</div>
+                    </div>
+                    <div class="stat">
+                      <div class="stat-title text-sm">Max</div>
+                      <div class="stat-value text-lg">{@current_weather.temp_max}°C</div>
+                    </div>
+                    <div class="stat">
+                      <div class="stat-title text-sm">Humidity</div>
+                      <div class="stat-value text-lg">{@current_weather.humidity}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+<!-- Hourly Forecast -->
+              <%= if @forecast_data && @forecast_data.hourly do %>
+                <div class="card bg-white shadow-xl">
+                  <div class="card-body">
+                    <h3 class="card-title">24-Hour Forecast</h3>
+                    <div class="overflow-x-auto">
+                      <div class="flex space-x-4 py-2">
+                        <%= for hourly <- @forecast_data.hourly do %>
+                          <div class="flex-shrink-0 text-center p-2 border rounded-lg min-w-24">
+                            <p class="text-sm font-medium">
+                              {if hourly.hour == DateTime.utc_now().hour,
+                                do: "Now",
+                                else: format_datetime(hourly.datetime)}
+                            </p>
+                            <p class="text-lg font-bold mt-1">{hourly.temperature}°</p>
+                            <p class="text-xs text-gray-500 capitalize">{hourly.description}</p>
+                          </div>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+              
+<!-- Daily Forecast -->
+              <%= if @forecast_data && @forecast_data.daily do %>
+                <div class="card bg-white shadow-xl">
+                  <div class="card-body">
+                    <h3 class="card-title">5-Day Forecast</h3>
+                    <div class="space-y-2">
+                      <%= for daily <- @forecast_data.daily do %>
+                        <div class="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
+                          <div class="flex-1">
+                            <p class="font-medium">{format_date(daily.date)}</p>
+                            <p class="text-sm text-gray-500 capitalize">{daily.description}</p>
+                          </div>
+                          <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">{daily.temp_min}°</span>
+                            <div class="w-16 h-1 bg-gradient-to-r from-blue-400 to-red-400 rounded">
+                            </div>
+                            <span class="font-medium">{daily.temp_max}°</span>
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+
+            <%= if @error_message do %>
+              <div class="card bg-white shadow-xl">
+                <div class="card-body">
+                  <div class="alert alert-error">
+                    <.icon name="hero-exclamation-triangle" class="h-6 w-6" />
+                    <span>{@error_message}</span>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% end %>
+        <% else %>
+          <div class="card bg-white shadow-xl">
+            <div class="card-body text-center">
+              <h2 class="text-xl font-bold mb-2">Welcome to Clima Weather</h2>
+              <p class="text-gray-500">
+                Search for cities and add them to favorites to see weather information
+              </p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
