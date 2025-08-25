@@ -1,0 +1,30 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "mcp": {
+        "clima-db": {
+            "type": "local",
+            "command": [
+                "uvx",
+                "--from",
+                "mcp-alchemy==2025.8.15.91819",
+                "--with",
+                "psycopg2-binary",
+                "--refresh-package",
+                "mcp-alchemy",
+                "mcp-alchemy"
+            ],
+            "enabled": true,
+            "environment": {
+                "DB_URL": "postgresql://postgres:postgres@localhost/clima_dev"
+            }
+        },
+        "playwright": {
+            "type": "local",
+            "command": [
+                "npx",
+                "@playwright/mcp@latest"
+            ],
+            "enabled": true
+        }
+    }
+}
