@@ -7,6 +7,10 @@ defmodule Clima.Application do
 
   @impl true
   def start(_type, _args) do
+    if Mix.env() != :test do
+      validate_environment_variables!()
+    end
+
     children = [
       ClimaWeb.Telemetry,
       Clima.Repo,
@@ -30,5 +34,36 @@ defmodule Clima.Application do
   def config_change(changed, _new, removed) do
     ClimaWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp validate_environment_variables! do
+    required_env_vars = [
+      {"OPENWEATHER_API_KEY",
+       "OpenWeatherMap API key is required. Get one at https://openweathermap.org/api"}
+    ]
+
+    missing_vars =
+      required_env_vars
+      |> Enum.filter(fn {var, _desc} ->
+        is_nil(System.get_env(var)) or System.get_env(var) == ""
+      end)
+
+    if not Enum.empty?(missing_vars) do
+      error_message =
+        missing_vars
+        |> Enum.map(fn {var, desc} -> "  - #{var}: #{desc}" end)
+        |> Enum.join("\n")
+
+      raise """
+      Missing required environment variables:
+
+      #{error_message}
+
+      Please set the required environment variables before starting the application.
+      Example:
+        export OPENWEATHER_API_KEY=your_api_key_here
+        mix phx.server
+      """
+    end
   end
 end

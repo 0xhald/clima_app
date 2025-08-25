@@ -9,7 +9,8 @@ import Config
 
 config :clima,
   ecto_repos: [Clima.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  weather_provider: Clima.WeatherProviders.OpenweatherProvider
 
 # Configures the endpoint
 config :clima, ClimaWeb.Endpoint,
