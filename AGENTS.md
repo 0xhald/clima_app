@@ -24,7 +24,30 @@
 
 ## Dependencies
 - Phoenix ~> 1.8, LiveView, Ecto/PostgreSQL, Tailwind CSS, daisyUI, Heroicons
+- Authentication: Phoenix generated auth with bcrypt password hashing
+- HTTP Client: Req for OpenWeatherMap API integration
 - Use existing deps before adding new ones - check mix.exs first
+
+## Clima-Specific Architecture
+
+### Dual-Mode Authentication System
+- **Optional Authentication**: App works for both anonymous and registered users
+- **Session-Based Favorites**: Anonymous users get session storage (survives page refreshes)
+- **Database Favorites**: Authenticated users get permanent storage with cross-device sync
+- **Automatic Migration**: Session favorites transfer to database during registration
+- **No Email Confirmation**: Users are auto-confirmed for streamlined UX
+
+### Favorites Context Pattern
+- **Unified Interface**: `Favorites.list_favorite_cities(user_or_session)` works for both user types
+- **Smart Detection**: Context functions automatically detect user vs session and route accordingly
+- **Consistent Returns**: Both modes return same data structure (list of FavoriteCity structs)
+- **Session ID Generation**: Anonymous favorites get generated IDs for UI consistency
+
+### Weather System
+- **Provider Pattern**: WeatherProvider behaviour allows multiple weather services
+- **Service Facade**: WeatherService provides consistent interface regardless of provider
+- **OpenWeatherMap**: Current implementation using OpenWeatherMap API
+- **Environment Validation**: App validates required API keys on startup
 
 <!-- phoenix-gen-auth-start -->
 ## Authentication

@@ -1,14 +1,24 @@
 # Clima Weather Application
 
-A Phoenix/Elixir web application for searching worldwide cities and tracking weather information using the OpenWeatherMap API.
+A Phoenix/Elixir web application for searching worldwide cities and tracking weather information using the OpenWeatherMap API. Features optional user authentication with session-based favorites for anonymous users and permanent storage for registered users.
 
 ## Features
 
+### Core Weather Functionality
 - **City Search**: Search for cities worldwide with real-time suggestions
-- **Favorites Management**: Add/remove cities from your favorites list
-- **Current Weather**: View temperature, min/max, humidity, and weather conditions
+- **Current Weather**: View temperature, min/max, humidity, and weather conditions  
 - **24-Hour Forecast**: Hourly weather predictions for the next 24 hours
 - **5-Day Forecast**: Daily weather forecasts with min/max temperatures
+
+### Dual-Mode Favorites System
+- **Anonymous Users**: Session-based favorites that work immediately without registration
+- **Registered Users**: Permanent favorites saved to database with cross-device sync
+- **Seamless Migration**: Session favorites automatically transfer when you create an account
+
+### User Authentication (Optional)
+- **Immediate Access**: Full weather functionality available without registration
+- **Progressive Enhancement**: Register to save favorites permanently
+- **No Email Confirmation**: Instant account activation for streamlined experience
 
 ## Requirements
 
@@ -46,6 +56,26 @@ mix phx.server
 
 ### 4. Access the Application
 Visit [`localhost:4000`](http://localhost:4000) from your browser.
+
+## User Experience
+
+### Anonymous Users
+- **Instant Access**: Start searching cities and viewing weather immediately
+- **Session Favorites**: Add cities to favorites - they'll persist during your browser session
+- **No Barriers**: Full weather functionality available without any registration
+- **Gentle Encouragement**: Helpful prompts to create an account for permanent storage
+
+### Registered Users  
+- **Account Creation**: Quick registration with immediate activation (no email confirmation)
+- **Data Migration**: Session favorites automatically transfer to your permanent account
+- **Cross-Device Sync**: Access your favorites from any device once logged in
+- **Persistent Storage**: Never lose your favorite cities
+
+### Registration Flow
+1. Use the app as an anonymous user with session-based favorites
+2. When ready, click "Sign Up" to create an account
+3. Your session favorites automatically migrate to your new account
+4. Enjoy permanent storage and cross-device access
 
 ## Testing
 
