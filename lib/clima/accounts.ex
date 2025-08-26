@@ -77,6 +77,8 @@ defmodule Clima.Accounts do
   def register_user(attrs) do
     %User{}
     |> User.email_changeset(attrs)
+    # Auto-confirm user upon registration
+    |> User.confirm_changeset()
     |> Repo.insert()
   end
 
@@ -93,8 +95,14 @@ defmodule Clima.Accounts do
 
   """
   def register_user_and_migrate_favorites(user_attrs, session_favorites \\ []) do
+    user_changeset =
+      %User{}
+      |> User.email_changeset(user_attrs)
+      # Auto-confirm user upon registration
+      |> User.confirm_changeset()
+
     Ecto.Multi.new()
-    |> Ecto.Multi.insert(:user, User.email_changeset(%User{}, user_attrs))
+    |> Ecto.Multi.insert(:user, user_changeset)
     |> Ecto.Multi.run(:migrate_favorites, fn _repo, %{user: user} ->
       migrate_session_favorites_to_user(user, session_favorites)
     end)

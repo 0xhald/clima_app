@@ -90,6 +90,7 @@ defmodule ClimaWeb.UserLive.Registration do
         socket =
           socket
           |> put_flash(:info, success_message)
+          |> clear_session_favorites()
           |> push_navigate(to: ~p"/")
 
         {:noreply, socket}
@@ -114,19 +115,17 @@ defmodule ClimaWeb.UserLive.Registration do
 
   defp build_success_message(email, migrated_count, session_count) do
     base_message = "Welcome to Clima Weather, #{email}! You're now logged in."
-
+    
     case {migrated_count, session_count} do
-      {0, 0} ->
-        base_message
-
-      {n, n} when n > 0 ->
-        "#{base_message} All #{n} of your session favorites have been saved to your account!"
-
-      {m, s} when m < s ->
-        "#{base_message} #{m} of your #{s} session favorites have been saved (duplicates skipped)."
-
-      _ ->
-        base_message
+      {0, 0} -> base_message
+      {n, n} when n > 0 -> "#{base_message} All #{n} of your session favorites have been saved to your account!"
+      {m, s} when m < s -> "#{base_message} #{m} of your #{s} session favorites have been saved (duplicates skipped)."
+      _ -> base_message
     end
+  end
+  
+  defp clear_session_favorites(socket) do
+    Phoenix.LiveView.delete_session(socket, "favorite_cities")
+  end
   end
 end
