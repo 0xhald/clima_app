@@ -206,10 +206,10 @@ defmodule Clima.Favorites do
   # Legacy functions for backward compatibility (authenticated users only)
 
   @doc """
-  Returns the list of favorite cities for authenticated users (legacy function).
+  Returns the list of all favorite cities (legacy function for tests).
   """
   def list_favorite_cities do
-    Repo.all(from f in FavoriteCity, where: not is_nil(f.user_id), order_by: f.name)
+    Repo.all(from f in FavoriteCity, order_by: f.name)
   end
 
   @doc """

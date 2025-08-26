@@ -94,6 +94,8 @@ defmodule ClimaWeb.UserSessionControllerTest do
 
     test "confirms unconfirmed user", %{conn: conn, unconfirmed_user: user} do
       {token, _hashed_token} = generate_user_magic_link_token(user)
+      # User will be auto-confirmed, so we manually set to nil for this test
+      user = Repo.update!(Ecto.Changeset.change(user, confirmed_at: nil))
       refute user.confirmed_at
 
       conn =

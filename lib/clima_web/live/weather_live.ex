@@ -187,7 +187,9 @@ defmodule ClimaWeb.WeatherLive do
           }
         end)
 
-      Phoenix.LiveView.put_session(socket, "favorite_cities", session_data)
+      # For anonymous users, we can't modify session in LiveView
+      # The session will be updated through form submissions
+      socket
     end
   end
 

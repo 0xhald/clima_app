@@ -81,17 +81,20 @@ defmodule ClimaWeb.UserLive.Registration do
     case Accounts.register_user_and_migrate_favorites(user_params, session_favorites) do
       {:ok, %{user: user, migrate_favorites: migrated}} ->
         # Log the user in immediately (no email confirmation)
-        conn = Phoenix.LiveView.get_connect_info(socket, :conn)
-        conn = ClimaWeb.UserAuth.log_in_user(conn, user)
-
         success_message =
           build_success_message(user.email, length(migrated), socket.assigns.favorite_count)
+
+        # Generate magic link for immediate login
+        {:ok, _} =
+          Accounts.deliver_login_instructions(user, fn token ->
+            "/users/log-in/#{token}"
+          end)
 
         socket =
           socket
           |> put_flash(:info, success_message)
           |> clear_session_favorites()
-          |> push_navigate(to: ~p"/")
+          |> push_navigate(to: ~p"/users/log-in")
 
         {:noreply, socket}
 
@@ -115,17 +118,25 @@ defmodule ClimaWeb.UserLive.Registration do
 
   defp build_success_message(email, migrated_count, session_count) do
     base_message = "Welcome to Clima Weather, #{email}! You're now logged in."
-    
+
     case {migrated_count, session_count} do
-      {0, 0} -> base_message
-      {n, n} when n > 0 -> "#{base_message} All #{n} of your session favorites have been saved to your account!"
-      {m, s} when m < s -> "#{base_message} #{m} of your #{s} session favorites have been saved (duplicates skipped)."
-      _ -> base_message
+      {0, 0} ->
+        base_message
+
+      {n, n} when n > 0 ->
+        "#{base_message} All #{n} of your session favorites have been saved to your account!"
+
+      {m, s} when m < s ->
+        "#{base_message} #{m} of your #{s} session favorites have been saved (duplicates skipped)."
+
+      _ ->
+        base_message
     end
   end
-  
+
   defp clear_session_favorites(socket) do
-    Phoenix.LiveView.delete_session(socket, "favorite_cities")
-  end
+    # Session favorites will be cleared when user logs in
+    # through the magic link flow
+    socket
   end
 end

@@ -82,7 +82,8 @@ defmodule Clima.AccountsTest do
       {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
       assert user.email == email
       assert is_nil(user.hashed_password)
-      assert is_nil(user.confirmed_at)
+      # We auto-confirm users now
+      assert not is_nil(user.confirmed_at)
       assert is_nil(user.password)
     end
   end
@@ -332,6 +333,8 @@ defmodule Clima.AccountsTest do
   describe "login_user_by_magic_link/1" do
     test "confirms user and expires tokens" do
       user = unconfirmed_user_fixture()
+      # User will be auto-confirmed, so we manually set to nil for this test
+      user = Repo.update!(Ecto.Changeset.change(user, confirmed_at: nil))
       refute user.confirmed_at
       {encoded_token, hashed_token} = generate_user_magic_link_token(user)
 

@@ -41,10 +41,39 @@ defmodule Clima.FavoritesTest do
       assert {:error, %Ecto.Changeset{}} = Favorites.create_favorite_city(@invalid_attrs)
     end
 
-    test "create_favorite_city/1 with duplicate coordinates returns error changeset" do
+    test "create_favorite_city/2 with duplicate coordinates for same user returns error changeset" do
+      user = Clima.AccountsFixtures.user_fixture()
+
+      # Create first favorite for the user
+      {:ok, _favorites} =
+        Favorites.create_favorite_city(
+          %{
+            name: "New York",
+            country: "US",
+            lat: 40.7128,
+            lon: -74.0060
+          },
+          user
+        )
+
+      # Try to create duplicate for same user - should fail
+      assert {:error, :already_exists} =
+               Favorites.create_favorite_city(
+                 %{
+                   name: "Another City",
+                   country: "US",
+                   lat: 40.7128,
+                   lon: -74.0060
+                 },
+                 user
+               )
+    end
+
+    test "create_favorite_city/1 with duplicate coordinates for anonymous users succeeds" do
       favorite_city_fixture()
 
-      assert {:error, %Ecto.Changeset{}} =
+      # Anonymous users can have duplicates (no global constraint)
+      assert {:ok, %FavoriteCity{}} =
                Favorites.create_favorite_city(%{
                  name: "Another City",
                  country: "US",

@@ -14,7 +14,7 @@
               Welcome, <span class="font-medium">{@current_user.email}</span>
             </span>
             <.link
-              href={~p"/users/log_out"}
+              href="/users/log-out"
               method="delete"
               class="btn btn-ghost btn-sm text-white hover:bg-white/20"
             >
@@ -33,7 +33,7 @@
               Sign Up
             </.link>
             <.link
-              href={~p"/users/log_in"}
+              href="/users/log-in"
               class="btn btn-ghost btn-sm text-white hover:bg-white/20"
             >
               Log In
